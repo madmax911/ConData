@@ -9,4 +9,4 @@ To start it you can create the folder C:\Data and drop the files in there.
 
 Then run the Start_server.bat script to run the back-end part.  This will require NodeJS.
 
-Once it starts, you can open the example provided (PurchasesPastDue.html).
+Once it starts, you can open the example provided (PurchasesPastDuePurchasesPastDue_example.html).
