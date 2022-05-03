@@ -1,0 +1,174 @@
+<!doctype html><html lang="en">                                                                                  <head>
+                <meta charset="utf-8"> <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Expires" content="0"/><meta http-equiv="Pragma" content="no-cache"/> <title> GuysOnShift </title>
+
+                                                                                                <style type="text/css">
+/*---------------------------------------------------------------------------------------------*/
+
+/*CSS Reset */        * { margin: 1; padding: 1 }
+
+                  div { position: absolute } /* border-width: 1px; border-style: solid; border-color: #AAA */
+
+    tr, th, td, table { border-collapse: collapse; border-width: 1px; border-style: solid; border-color: #DDD;
+                        padding: 2px; white-space: nowrap; font-family: 'Lucida Console'; font-size: 12px }
+
+                   th { text-align: left; background-color: #DDD; border-color: #AAA }
+
+/*----------------------------------------------------------------------------------------------*/</style></head><body>
+
+  <!--==    *  Form Controls  *     ==-->
+
+     <div id="divContent" style="           top:    2px;
+                                 left: 2px;              right: 2px;
+                                            bottom: 2px             "></div>
+
+<!--=================================================================================================--></body><script>
+
+const Console_Show_Qry = 1; //  (0/1)   ---   Show Query text in console
+
+var RestURL = "http://10.220.36.15:8889/";
+
+// var FloorSysDB = "SQL://SRV02\\SQLEXPRESS/FloorSysDB";
+
+var FloorSysDB = "SQL://SRV03/FloorSysDB";
+
+
+window.onload = window.onhashchange = function()
+{
+  divContent.innerHTML = "";
+
+  var GuysOnShift = `
+    SELECT
+      EmployeeStatus.EmpNumber,
+      Employee.BadgeNumber,
+      Employee.Name,
+      EmployeeStatus.ClockIn,
+      Employee.DeptNo,
+      Employee.AutoDept,
+      EmployeeStatus.CurrWO1,
+      EmployeeStatus.CurrMach1,
+      EmployeeStatus.CurrOperation1,
+      EmployeeStatus.CurrWO2,
+      EmployeeStatus.CurrMach2,
+      EmployeeStatus.CurrOperation2,
+      EmployeeStatus.CurrDep,
+      EmployeeStatus.ClockOverride,
+      Employee.ExtendedOptions,
+      Employee.Flags1,
+      Employee.Flags2,
+      Employee.QualifiedMachines
+    FROM
+      EmployeeStatus
+        LEFT JOIN
+          Employee
+        ON
+          EmployeeStatus.EmpNumber = Employee.EmpNumber
+    WHERE
+      EmployeeStatus.ClockStatus = 1
+
+  ` + (location.hash ? " ORDER BY " + location.hash.slice(1) + " ASC" : "");
+  
+  var GuysStatusAll = `
+    SELECT
+      EmployeeStatus.EmpNumber,
+      Employee.BadgeNumber,
+      Employee.Name,
+      EmployeeStatus.ClockIn,
+      EmployeeStatus.ClockOut,
+      Employee.DeptNo,
+      Codes.Description
+    FROM (
+      EmployeeStatus
+        LEFT JOIN 
+          Employee
+        ON
+          EmployeeStatus.EmpNumber = Employee.EmpNumber )
+
+          LEFT JOIN
+            Codes
+          ON
+            Employee.DeptNo = CONVERT(INT, Codes.Code)
+
+    WHERE
+      Codes.Type = 5
+
+  ` + (location.hash ? " ORDER BY " + location.hash.slice(1) + " ASC" : "");
+
+  RunQrys([
+            { Qry: GuysOnShift,    Db: FloorSysDB,  Lbl: 'Guys on shift:'       },
+            { Qry: GuysStatusAll,  Db: FloorSysDB,  Lbl: 'Guys (all statuses):' }
+          ],
+
+      Each_CallBackFn = function(Data)
+      { 
+          divContent.innerHTML += "<hr><br>\r\n" + Data.Lbl + "<br>\r\n" + ToTable(Data) + "<br><br>\r\n\r\n";
+      },
+
+      Final_CallBackFn = function(Data)
+      { 
+          divContent.innerHTML += "<hr><br>\r\n Finished processing " + Datas.length + " queries.<br><br>\r\n\r\n";
+      },
+
+      Each_Sync = true // Arrive in same order.
+  );
+}
+
+// ----------------------------------------- Table helper functions -------
+
+function ToTable(Data)                   //  Values_2D-Array => table
+{
+  let TH = "<tr>"
+         + Data.ConData.Names.reduce((a,v) => `${a}<th><a href="#${v}">${v}</a></th>`, '')
+         + "</tr>\r\n"; // Table header
+
+  return ''
+   + "<table>\r\n" + TH
+   + Data.ConData.Values.reduce((a,v) => a + "<tr>\r\n" + v.reduce((a2,v2) => `${a2}<td>${v2}</td>`, '')
+                                           + "</tr>\r\n", '')
+   + "</table>\r\n";
+}
+
+// ----------------------------------------- Query helper functions --------
+
+function RunQrys(Datas, Each_CallBackFn, Final_CallBackFn, Each_Sync)
+{
+  var QrysLeft = Datas.length;
+
+  Datas.forEach(function(Data, Index)
+  {
+      Data.Con = new XMLHttpRequest();
+
+      Data.Con.onreadystatechange = function()
+      {
+        if (Data.Con.readyState == 4 && Data.Con.status == 200)
+        {
+          if (Console_Show_Qry)
+          {
+            console.log("Received: ", Data.Con.responseText);
+          }
+
+          Data.ConData = JSON.parse(Data.Con.responseText);
+          Data.Done    = true;
+
+          QrysLeft--;
+
+          if (Each_CallBackFn) Each_CallBackFn(Data);
+
+          if (QrysLeft <= 0)
+          {
+            if (Final_CallBackFn) Final_CallBackFn(Datas);
+          }
+        }
+      };
+
+      Data.Con.open("POST", RestURL, !Each_Sync);
+      Data.Con.send(Data.Db + "\r\n //// \r\n" + Data.Qry);
+
+      if (Console_Show_Qry)
+      {
+        console.info(location.href, Data, Data.Db, Data.Qry);
+      }
+  });
+}
+
+/*---------------------------------------------------------------------------------------------------*/</script></html>
