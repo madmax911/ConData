@@ -126,7 +126,7 @@
         : 'Data not found.';
 
       let getData = async (type, uri, db, qry) =>
-        JSON.parse((await fetch(uri, getPostBody(type, db, qry)).then(res => res.text())));
+        JSON.parse(await fetch(uri, getPostBody(type, db, qry)).then(res => res.text()));
 
       let queryBtnClick = async () =>
       {
