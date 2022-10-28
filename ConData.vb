@@ -1,4 +1,4 @@
-﻿Option Explicit On
+Option Explicit On
 Option Strict On
 
 Imports System.Data.OleDb
@@ -16,24 +16,27 @@ Module Module1
 
         Dim cSuperType As Hashtable = New Hashtable() ' Type/SubType hashtable
 
-        cSuperType.Add("Boolean",  "Boolean")
-        cSuperType.Add("String",   "String") : cSuperType.Add("Char",     "String") : cSuperType.Add("Guid",   "String")
-        cSuperType.Add("DateTime", "Date")   : cSuperType.Add("TimeSpan", "Date")
-        cSuperType.Add("Byte",     "Number") : cSuperType.Add("SByte",    "Number")
-        cSuperType.Add("Double",   "Number") : cSuperType.Add("Decimal",  "Number") : cSuperType.Add("Single", "Number")
-        cSuperType.Add("Int64",    "Number") : cSuperType.Add("Int32",    "Number") : cSuperType.Add("Int16",  "Number")
-        cSuperType.Add("UInt64",   "Number") : cSuperType.Add("UInt32",   "Number") : cSuperType.Add("UInt16", "Number")
+        cSuperType.Add("Boolean", "Boolean")
+        cSuperType.Add("String", "String") : cSuperType.Add("Char", "String") : cSuperType.Add("Guid", "String")
+        cSuperType.Add("DateTime", "Date") : cSuperType.Add("TimeSpan", "Date")
+        cSuperType.Add("Byte", "Number") : cSuperType.Add("SByte", "Number")
+        cSuperType.Add("Double", "Number") : cSuperType.Add("Decimal", "Number") : cSuperType.Add("Single", "Number")
+        cSuperType.Add("Int64", "Number") : cSuperType.Add("Int32", "Number") : cSuperType.Add("Int16", "Number")
+        cSuperType.Add("UInt64", "Number") : cSuperType.Add("UInt32", "Number") : cSuperType.Add("UInt16", "Number")
+
+        cSuperType.Add("Byte[]", "Date") ' To handle SQL server's annoying datestamp type.
+
         'cSuperType.Add("Null",     "null") - handled by oReader.IsDBNull
 
         Dim E As Integer = 0
         Dim E_Desc As String = ""
 
-        Dim nFieldCount  As Integer = 0 ' temp vars
+        Dim nFieldCount As Integer = 0 ' temp vars
         Dim nRecordCount As Integer = 0
 
-        Dim sShortType    As String = "" ' temp vars
+        Dim sShortType As String = "" ' temp vars
         Dim sShortSubType As String = ""
-        Dim sVal    As String = ""
+        Dim sVal As String = ""
         Dim sVal_Qt As String = ""
         Dim nLooper As Integer = 0
 
@@ -41,7 +44,7 @@ Module Module1
 
         Dim sMdb As String = ""  ' "C:\Path\Somefile.mdb"  (also from MDB://C:\Path\Somefile.mdb)
 
-        Dim sSQLFullURI  As String      ' SQL://Server\Instance/Database
+        Dim sSQLFullURI As String      ' SQL://Server\Instance/Database
         Dim sSQLServInst As String = "" ' Server\Instance
         Dim sSQLDatabase As String = "" ' Database
 
@@ -85,53 +88,53 @@ Module Module1
 
         If E = 0 And sQry = "" Then ' Check for Query errors with STDIN
             E = -65539
-            E_Desc = " \r\n  Note from ConData: \r\n Query text input is blank!" &
-                     " \r\n  Query text must be provided through STDIN (standard input). \r\n"
+            E_Desc = "   Note from ConData:  Query text input is blank!" &
+                     "   Query text must be provided through STDIN (standard input). "
         End If
 
         If E = 0 And Not (sQryType = "SELECT" Or sQryType = "INSERT" Or
                           sQryType = "UPDATE" Or sQryType = "DELETE") Then
             E = -65540
-            E_Desc = " \r\n  Note from ConData: \r\n Query type not supported! " &
-                 " \r\n\r\n  Please try one of the 4 types instead: \r\n SELECT, INSERT, UPDATE or DELETE. " &
-                 " \r\n\r\n  Your data: \r\n " & sQry & " \r\n"
+            E_Desc = "   Note from ConData:  Query type not supported! " &
+                 "   Please try one of the 4 types instead:  SELECT, INSERT, UPDATE or DELETE. " &
+                 "   Your data:  " & sQry & " "
         End If
 
         If sDBType = "MDB" Then
             If E = 0 And sMdb = "" Then ' Check for Mdb file errors with Command parameter
                 E = -65536
-                E_Desc = " \r\n  Note from ConData: Parameter is blank! \r\n Mdb file not specified! " &
-                         " \r\n  Should be full path name of Mdb file. " &
-                         " \r\n  Example: \r\n ConData.exe c:\folder\myfile.mdb \r\n"
+                E_Desc = "   Note from ConData: Parameter is blank!  Mdb file not specified! " &
+                         "   Should be full path name of Mdb file. " &
+                         "   Example:  ConData.exe c:\folder\myfile.mdb "
             End If
 
             If E = 0 And Not (sMdb.Substring(sMdb.Length - 4).ToUpper = ".MDB" _
                                Or sMdb.Substring(sMdb.Length - 4).ToUpper = ".ACCDB") Then
                 E = -65538
-                E_Desc = " \r\n  Note from ConData: \r\n File specified is not of type .mdb or .accdb! " &
-                         " \r\n  Should be full path name of mdb/accdb file. " &
-                         " \r\n  Example: \r\n ConData.exe c:\folder\myfile.mdb " &
-                     " \r\n\r\n  Your data: \r\n " & sMdb & " \r\n"
+                E_Desc = "   Note from ConData:  File specified is not of type .mdb or .accdb! " &
+                         "   Should be full path name of mdb/accdb file. " &
+                         "   Example:  ConData.exe c:\folder\myfile.mdb " &
+                     "   Your data:  " & sMdb & " "
             End If
             '        AndAlso >-   -   -  -  -  - - - - - - - ----> If E != 0, Don't bother checking Dir(sMbd).
             '                                                      A.k.a "short circuiting logic" / "smart if"
             If E = 0 AndAlso Dir(sMdb) = "" Then ' Not exists?
                 E = -65537
-                E_Desc = " \r\n  Note from ConData: File (FileName=" & sMdb & ") not found! " &
-                         " \r\n  Should be full path name of Mdb file. " &
-                         " \r\n  Example: \r\n ConData.exe c:\folder\myfile.mdb \r\n"
+                E_Desc = "   Note from ConData: File (FileName=" & sMdb & ") not found! " &
+                         "   Should be full path name of Mdb file. " &
+                         "   Example:  ConData.exe c:\folder\myfile.mdb "
             End If
         End If
 
         If sDBType = "SQL" Then
             If E = 0 And sSQLServInst = "" Then
                 E = -32001
-                E_Desc = " \r\n  Note from ConData: Server Instance should not be blank. "
+                E_Desc = "   Note from ConData: Server Instance should not be blank. "
             End If
 
             If E = 0 And sSQLDatabase = "" Then
                 E = -32002
-                E_Desc = " \r\n  Note from ConData: Database should not be blank. "
+                E_Desc = "   Note from ConData: Database should not be blank. "
             End If
         End If
 
@@ -146,7 +149,7 @@ Module Module1
                                           & sSQLDatabase & ";SERVER=" & sSQLServInst)
             Else
                 E = -1509
-                E_Desc = "Note from ConData:  \r\n URI Scheme not understood."
+                E_Desc = "Note from ConData:   URI Scheme not understood."
             End If
 
             oCmd = New OleDbCommand(sQry, oConn)
@@ -156,8 +159,8 @@ Module Module1
             Catch
                 E = Err.Number
                 E_Desc = Err.Description.Replace("""", "").Replace("\", "") &
-                         " \r\n  ... Note from ConData / oConn.Open(): " &
-                         " \r\n  Meaning: \r\n Error opening the database. \r\n"
+                         "   ... Note from ConData / oConn.Open(): " &
+                         "   Meaning:  Error opening the database. "
             End Try
         End If
 
@@ -169,8 +172,8 @@ Module Module1
                     E = Err.Number
                     E_Desc = Err.Description.Replace("""", "").Replace("\", "") &
                              " ... Note from ConData / oCmd.ExecuteReader(): " &
-                       " \r\n  Meaning: \r\n There was an error executing a SELECT Query " &
-                       " \r\n  (for which results were expected back). \r\n"
+                       "   Meaning:  There was an error executing a SELECT Query " &
+                       "   (for which results were expected back). "
                 End Try
             Else              ' INSERT, UPDATE or DELETE
                 Try
@@ -179,12 +182,14 @@ Module Module1
                     nRecordCount = 0
                     E = Err.Number
                     E_Desc = Err.Description.Replace("""", "").Replace("\", "") &
-                             " \r\n  ... Note from ConData / oCmd.ExecuteNonQuery(): " &
-                             " \r\n  Meaning: \r\n There was an error executing a NON-SELECT Query, " &
-                             " \r\n  that is -- An UPDATE, INSERT, or DELETE. \r\n"
+                             "   ... Note from ConData / oCmd.ExecuteNonQuery(): " &
+                             "   Meaning:  There was an error executing a NON-SELECT Query, " &
+                             "   that is -- An UPDATE, INSERT, or DELETE. "
                 End Try
             End If
         End If
+
+        E_Desc = E_Desc.Replace("\", "\\") ' escape backslashes in path names.
 
         Console.WriteLine("{")
         Console.WriteLine("  ""ErrNum"":      " & E & ",")
@@ -287,10 +292,12 @@ Module Module1
                     Else
                         Console.Write(sVal_Qt)
 
-                        Console.Write(oReader(nLooper).ToString _
-                                                      .Replace("""", "``") _
-                                                      .Replace("'", "`") _
+                        Console.Write(oReader(nLooper).ToString() _
+                                                      .Replace("\", "\\") _
+                                                      .Replace("""", "\""") _
                                                       .Replace(vbCrLf, " ") _
+                                                      .Replace(vbCr, " ") _
+                                                      .Replace(vbLf, " ") _
                                                       .Replace(vbTab, " ") _
                                                       .Replace("True", "true") _
                                                       .Replace("False", "false"))
