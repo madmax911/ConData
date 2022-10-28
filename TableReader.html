@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Database table reader</title>
+    <style>
+
+      #container
+      {
+        display: grid;
+        grid-template-columns: 150px auto;
+        grid-template-areas:
+        "types    presets"
+        "settings settings"
+        "controls query"
+        "buttons  contents";
+      }
+
+      #types    { grid-area: types }
+      #presets  { grid-area: presets }
+      #settings { grid-area: settings }
+      #controls { grid-area: controls }
+      #query    { grid-area: query }
+      #buttons  { grid-area: buttons }
+      #contents { grid-area: contents }
+
+      #types    { background-color: #CFFFAF; }
+      #presets  { background-color: #DBEAFA; }
+      #settings { background-color: #EFDEFF; }
+      #controls { background-color: #FAFEBF; }
+      #query    { background-color: #FFEBEC; }
+      #buttons  { background-color: #FFFCAF; }
+      #contents { background-color: #DDFFED; }
+
+      header
+      {
+        padding: 25px 0 25px 0;
+      }
+
+      table, tr, td
+      {
+        border-width: 1px;
+        border-style: solid; 
+        border-color: #CCC;
+        border-collapse: collapse;
+        white-space: nowrap;
+        font-family: monospace;
+      }
+
+      th
+      {
+        text-align: left;
+        background-color: #DDD;
+        border-color: #AAA
+      }
+
+    </style>
+  </head>
+  <body>
+    <template id="spinner">
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 38 38" stroke="#88E">
+      <g fill="none" fill-rule="evenodd">
+          <g transform="translate(1 1)" stroke-width="2">
+              <circle stroke-opacity=".5" cx="18" cy="18" r="18"/>
+              <path d="M36 18c0-9.94-8.06-18-18-18">
+                  <animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/>
+              </path>
+          </g>
+      </g>
+      </svg>
+    </template>
+
+    <main id="container">
+      <header id="types">
+        Type:<br>
+        <input type="radio" name="optType" id="MDB" checked /> <label for="MDB">MDB</label><br>
+        <input type="radio" name="optType" id="SQL" />         <label for="SQL">SQL</label><br><br>
+      </header>
+
+      <header id="presets">
+        Presets:<br>
+        <button onclick="preSet('SchemaTest.mdb')">SchemaTest.mdb</button>
+        <button onclick="preSet('MfgHist.mdb')">MfgHist.mdb</button>
+        <button onclick="preSet('FloorSys')">FloorSys</button><br>
+        <button onclick="preSet('Packers.mdb')">Packers.mdb</button>
+        <button onclick="preSet('Bridge.mdb')">Bridge.mdb</button>
+        <button onclick="preSet('Ms3Edi.mdb')">Ms3Edi.mdb</button>
+
+      </header>
+
+      <header id="settings">
+        
+        Server URI:   <input type="text" id="txtServerURI" size="30" value="http://10.220.36.15:8889/" ></input><br>
+        MDB Database: <input type="text" id="txtDatabase"  size="60" value="T:\Databases\Admin\SchemaTest.mdb" ></input><br><br>
+        SQL Server:   <input type="text" id="txtSQLServer" size="15" value="SRV03" ></input>
+        SQL Instance: <input type="text" id="txtSQLInstance" size="15" value="FloorSysDB" ></input>
+
+      </header>
+      <header id="controls">Top: <input type="number" id="numRows" value="100" min="1" max="10000000"></input><br><h5>(for tables below)</h5></header>
+      <header id="query">
+        Query:<br>
+        <textarea id="txtQuery" rows="5" cols="50"></textarea><br>
+        <button onclick="queryBtnClick()">Run...</button>
+      </header>
+      <nav id="buttons"></nav>
+      <section id="contents"></section>
+    </main>
+
+    <script defer>
+
+      let getPostBody = (type, db, qry) =>
+      ({
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body: type + '://' + db + '\r\n //// \r\n' + qry
+      });
+
+      let toTable = (table, th) =>
+        table ?
+          "<table>"
+        + th.map(v => `<th>${v}</th>`).join('')
+        + table.map((tr) =>
+           '<tr>' + tr.map((td) =>
+             `<td>${td}</td>`).join('')
+        + '</tr>').join('')
+        + '</table>'
+        : 'Data not found.';
+
+      let getData = async (type, uri, db, qry) =>
+        JSON.parse((await fetch(uri, getPostBody(type, db, qry)).then(res => res.text())));
+
+      let queryBtnClick = async () =>
+      {
+        contents.innerHTML = spinner.innerHTML;
+
+        let data = await getData(MDB.checked ? 'MDB' : 'SQL',
+                                 txtServerURI.value,
+                                 MDB.checked ? txtDatabase.value : txtSQLServer.value + '/' + txtSQLInstance.value,
+                                 txtQuery.value);
+        console.log(data);
+
+        contents.innerHTML = data.ErrDesc || toTable(data.Values, data.Names);
+      };
+
+      let tableBtnClick = async (tableName) =>
+      {
+        txtQuery.value = `SELECT TOP ${numRows.value} * FROM ${tableName};`
+        queryBtnClick();
+      };
+
+      let preSet = (db_txt) =>
+      {
+        let is_mdb = ['mdb','accdb'].includes(db_txt.split('.').slice(-1).toString().toLowerCase());
+
+        MDB.checked = is_mdb;
+        SQL.checked = !is_mdb;
+
+        if (is_mdb)
+        {
+          txtDatabase.value =
+          {
+            'SchemaTest.mdb' : "T:\\Databases\\Admin\\SchemaTest.mdb",
+            'MfgHist.mdb'    : "\\\\tandlsbs\\databases\\floor\\MfgHist.mdb",
+            'Packers.mdb'    : "\\\\tandlsbs\\databases\\packline\\Packers.mdb",
+            'Bridge.mdb'     : "\\\\tandlsbs\\databases\\floor\\Bridge.mdb",
+            'Ms3Edi.mdb'     : "\\\\tandlsbs\\databases\\admin\\Ms3Edi.mdb"
+          }[db_txt];
+        }
+        else
+        {
+          txtSQLServer.value   = {'FloorSys': "SRV03"}[db_txt];
+          txtSQLInstance.value = {'FloorSys': "FloorSysDB"}[db_txt];
+        }
+
+        window.onload();
+      };
+
+      /*-------------------------------------------------------------------------------------------------------*/
+
+      window.onload = (async () =>
+      {
+        buttons.innerHTML = spinner.innerHTML;
+
+        let data = await getData(MDB.checked ? 'MDB' : 'SQL', // Populate initial buttons.
+                                 txtServerURI.value,
+                                 MDB.checked ? txtDatabase.value : txtSQLServer.value + '/' + txtSQLInstance.value,
+                                 MDB.checked ?
+                                   "SELECT Name FROM MSysObjects WHERE Type = 1 AND Name NOT LIKE '~%' AND Name NOT LIKE 'MSys%' ORDER BY Name ASC"
+                                 : "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ORDER BY TABLE_NAME ASC");
+        console.log(data);
+
+        buttons.innerHTML = data.ErrDesc ||
+        data.Values.map(v => v[0])
+                   .map(v => `<button onClick="tableBtnClick('${v}')"> ${v} </button>`)
+                   .join('<br>\n');
+      });
+
+    </script>
+  </body>
+</html>
