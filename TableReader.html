@@ -9,27 +9,27 @@
         display: grid;
         grid-template-columns: 150px auto;
         grid-template-areas:
-        "types    presets"
+        "types    databases"
         "settings settings"
         "controls query"
         "buttons  contents";
       }
 
-      #types    { grid-area: types }
-      #presets  { grid-area: presets }
-      #settings { grid-area: settings }
-      #controls { grid-area: controls }
-      #query    { grid-area: query }
-      #buttons  { grid-area: buttons }
-      #contents { grid-area: contents }
+      #types     { grid-area: types }
+      #databases { grid-area: databases }
+      #settings  { grid-area: settings }
+      #controls  { grid-area: controls }
+      #query     { grid-area: query }
+      #buttons   { grid-area: buttons }
+      #contents  { grid-area: contents }
 
-      #types    { background-color: #CFFFAF; }
-      #presets  { background-color: #DBEAFA; }
-      #settings { background-color: #EFDEFF; }
-      #controls { background-color: #FAFEBF; }
-      #query    { background-color: #FFEBEC; }
-      #buttons  { background-color: #FFFCAF; }
-      #contents { background-color: #DDFFED; }
+      #types     { background-color: #CFFFAF; }
+      #databases { background-color: #DBEAFA; }
+      #settings  { background-color: #EFDEFF; }
+      #controls  { background-color: #FAFEBF; }
+      #query     { background-color: #FFEBEC; }
+      #buttons   { background-color: #FFFCAF; }
+      #contents  { background-color: #DDFFED; }
 
       header
       {
@@ -76,36 +76,41 @@
         <input type="radio" name="optType" id="SQL" />         <label for="SQL">SQL</label><br><br>
       </header>
 
-      <header id="presets">
-        Presets:<br>
-        <button onclick="preSet('SchemaTest.mdb')">SchemaTest.mdb</button>
-        <button onclick="preSet('MfgHist.mdb')">MfgHist.mdb</button>
-        <button onclick="preSet('FloorSys')">FloorSys</button><br>
-        <button onclick="preSet('Packers.mdb')">Packers.mdb</button>
-        <button onclick="preSet('Bridge.mdb')">Bridge.mdb</button>
-        <button onclick="preSet('Ms3Edi.mdb')">Ms3Edi.mdb</button>
-
+      <header id="databases">
+        Databases:<br>
+        <button onclick="switchDb('SchemaTest.mdb')">SchemaTest.mdb</button>
+        <button onclick="switchDb('MfgHist.mdb')">MfgHist.mdb</button>
+        <button onclick="switchDb('FloorSys')">FloorSys</button><br>
+        <button onclick="switchDb('Packers.mdb')">Packers.mdb</button>
+        <button onclick="switchDb('Bridge.mdb')">Bridge.mdb</button>
+        <button onclick="switchDb('Ms3Edi.mdb')">Ms3Edi.mdb</button>
       </header>
 
       <header id="settings">
-        
-        Server URI:   <input type="text" id="txtServerURI" size="30" value="http://10.220.36.15:8889/" ></input><br>
-        MDB Database: <input type="text" id="txtDatabase"  size="60" value="T:\Databases\Admin\SchemaTest.mdb" ></input><br><br>
-        SQL Server:   <input type="text" id="txtSQLServer" size="15" value="SRV03" ></input>
+        Server URI:   <input type="text" id="txtServerURI"   size="30" value="http://10.220.36.15:8889/" ></input><br>
+        MDB Database: <input type="text" id="txtDatabase"    size="60" value="T:\Databases\Admin\SchemaTest.mdb" ></input><br><br>
+        SQL Server:   <input type="text" id="txtSQLServer"   size="15" value="SRV03" ></input>
         SQL Instance: <input type="text" id="txtSQLInstance" size="15" value="FloorSysDB" ></input>
-
       </header>
-      <header id="controls">Top: <input type="number" id="numRows" value="100" min="1" max="10000000"></input><br><h5>(for tables below)</h5></header>
+
+      <header id="controls">
+        Top: <input type="number" id="numRows" value="100" min="1" max="10000000"></input><br>
+        Sort: <input type="text" id="txtOrderBy" ></input><br>
+        <h5>(for tables below)</h5>
+      </header>
+
       <header id="query">
         Query:<br>
         <textarea id="txtQuery" rows="5" cols="50"></textarea><br>
         <button onclick="queryBtnClick()">Run...</button>
       </header>
+
       <nav id="buttons"></nav>
       <section id="contents"></section>
     </main>
 
     <script defer>
+      let currentTable = '';
 
       let getPostBody = (type, db, qry) =>
       ({
@@ -117,7 +122,7 @@
       let toTable = (table, th) =>
         table ?
           "<table>"
-        + th.map(v => `<th>${v}</th>`).join('')
+        + th.map(v => `<th> <a href="#" onclick="txtOrderBy.value = '${v}'; tableBtnClick('${currentTable}');">${v}</a></th>`).join('')
         + table.map((tr) =>
            '<tr>' + tr.map((td) =>
              `<td>${td}</td>`).join('')
@@ -143,13 +148,18 @@
 
       let tableBtnClick = async (tableName) =>
       {
-        txtQuery.value = `SELECT TOP ${numRows.value} * FROM ${tableName};`
+        txtQuery.value = `SELECT TOP ${numRows.value} * FROM ${tableName}`
+                       + (txtOrderBy.value ? ` ORDER BY ${txtOrderBy.value} ASC;` : ';');
+
+        currentTable = tableName;
         queryBtnClick();
       };
 
-      let preSet = (db_txt) =>
+      let switchDb = (db_txt) =>
       {
         let is_mdb = ['mdb','accdb'].includes(db_txt.split('.').slice(-1).toString().toLowerCase());
+
+        txtOrderBy.value = '';
 
         MDB.checked = is_mdb;
         SQL.checked = !is_mdb;
@@ -179,6 +189,8 @@
       window.onload = (async () =>
       {
         buttons.innerHTML = spinner.innerHTML;
+
+        txtOrderBy.value = '';
 
         let data = await getData(MDB.checked ? 'MDB' : 'SQL', // Populate initial buttons.
                                  txtServerURI.value,
