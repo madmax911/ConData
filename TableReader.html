@@ -95,7 +95,6 @@
 
       <header id="controls">
         Top: <input type="number" id="numRows" value="100" min="1" max="10000000"></input><br>
-        Sort: <input type="text" id="txtOrderBy" ></input><br>
         <h5>(for tables below)</h5>
       </header>
 
@@ -111,6 +110,7 @@
 
     <script defer>
       let currentTable = '';
+      let orderBy = '';
 
       let getPostBody = (type, db, qry) =>
       ({
@@ -122,7 +122,7 @@
       let toTable = (table, th) =>
         table ?
           "<table>"
-        + th.map(v => `<th> <a href="#" onclick="txtOrderBy.value = '${v}'; tableBtnClick('${currentTable}');">${v}</a></th>`).join('')
+        + th.map(v => `<th> <a href="#" onclick="orderBy = '${v}'; tableBtnClick('${currentTable}');">${v}</a></th>`).join('')
         + table.map((tr) =>
            '<tr>' + tr.map((td) =>
              `<td>${td}</td>`).join('')
@@ -136,6 +136,7 @@
       let queryBtnClick = async () =>
       {
         contents.innerHTML = spinner.innerHTML;
+        orderBy = '';
 
         let data = await getData(MDB.checked ? 'MDB' : 'SQL',
                                  txtServerURI.value,
@@ -149,7 +150,7 @@
       let tableBtnClick = async (tableName) =>
       {
         txtQuery.value = `SELECT TOP ${numRows.value} * FROM ${tableName}`
-                       + (txtOrderBy.value ? ` ORDER BY ${txtOrderBy.value} ASC;` : ';');
+                       + (orderBy ? ` ORDER BY ${orderBy} ASC;` : ';');
 
         currentTable = tableName;
         queryBtnClick();
@@ -159,7 +160,7 @@
       {
         let is_mdb = ['mdb','accdb'].includes(db_txt.split('.').slice(-1).toString().toLowerCase());
 
-        txtOrderBy.value = '';
+        orderBy = '';
 
         MDB.checked = is_mdb;
         SQL.checked = !is_mdb;
@@ -190,7 +191,7 @@
       {
         buttons.innerHTML = spinner.innerHTML;
 
-        txtOrderBy.value = '';
+        orderBy = '';
 
         let data = await getData(MDB.checked ? 'MDB' : 'SQL', // Populate initial buttons.
                                  txtServerURI.value,
