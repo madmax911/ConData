@@ -16,7 +16,7 @@ Once it starts, you can open the example provided (PurchasesPastDue_example.html
 The perfect example:
 
 ```JavaScript
-// ADO over http...
+// ADO over http...  (Note:  This is of course, a simplification to get the idea across.  See the html files for actual use.)
 
 let uri   = "http://MyServer";
 let query = "SELECT * FROM Alloys";
